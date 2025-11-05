@@ -10,7 +10,7 @@ COPY *.go ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /dbhelper
 
 FROM alpine:latest
-
+COPY misspellings.json ./
 WORKDIR /
 
 COPY --from=builder /dbhelper /dbhelper
