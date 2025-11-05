@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
     textstore:
         image: mongo:latest
@@ -9,10 +7,13 @@ services:
             - "27017"
         volumes:
          -  textstore-data:/data/db
-         -  mongo-config/data/configdb
+         -  mongo-config:/data/configdb
 
     dbhelper:
         image: dbhelper
+        environment:
+            TEXTSTORE_HOST: mongodb://textstore:27017
+        
 volumes:
     textstore-data:
     mongo-config:
