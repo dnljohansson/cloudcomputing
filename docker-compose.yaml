@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+    textstore:
+        image: mongo:latest
+        restart: always
+        command: -quiet -syslog
+        expose:
+            - "27017"
+        volumes:
+         -  textstore-data:/data/db
+         -  mongo-config/data/configdb
+
+    dbhelper:
+        image: dbhelper
+volumes:
+    textstore-data:
+    mongo-config:
