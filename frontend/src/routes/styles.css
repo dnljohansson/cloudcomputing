@@ -1,0 +1,33 @@
+html, body{
+    height: 100%;
+    margin: 0;
+    padding: 0;
+
+}
+
+body{
+    background: rgb(40, 44, 52);
+    background-size: cover;
+    font-family: "Poppins", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    color: white;
+}
+
+.navbar{
+    display: flex;
+    margin: none;
+    width: 100%;
+    background-color: rgb(52, 57, 68);
+    gap: 20px;
+}
+.navbar a{
+    font-size: 30px;
+    font-family: "Dosis", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-style: normal;
+    color: aliceblue;
+    text-decoration: none;
+    padding: 5px;
+}

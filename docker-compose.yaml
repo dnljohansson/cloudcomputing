@@ -13,6 +13,18 @@ services:
         image: dbhelper
         environment:
             TEXTSTORE_HOST: mongodb://textstore:27017
+    #worker:
+    #    image: worker
+    #    environment:
+    #        TEXTSTORE_HOST: mongodb://textstore:27017
+    
+    frontend:
+        image: frontend
+        ports:
+            - 80:5173
+        volumes:
+            - ./frontend/src:/app/src
+            - ./frontend/static:/app/static
         
 volumes:
     textstore-data:
