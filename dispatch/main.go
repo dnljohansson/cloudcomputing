@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,6 +20,8 @@ var client = &http.Client{
 }
 
 //allows the load balancer to do its work, as we are forcing this client to do a DNS lookup for every connection
+//Note: does not appear to work with docker's internal load balancer, as it doesn't properly round-robin the requests
+//It instead sends requests to two of the services
 
 const port = "3000"
 
@@ -39,7 +40,7 @@ func sendWork(work *Work, jobs *sync.WaitGroup, results [][]string, index int) {
 	workerURL := os.Getenv("WORKER_URL")
 	defer jobs.Done()
 
-	log.Printf("▶️  Sending segment to worker: \"%.30s...\"", work.Segment)
+	log.Printf("Sending segment to worker: %s", work.Segment)
 	marshaled, err := json.Marshal(work)
 	if err != nil {
 		panic("Failed to marshal work.")
@@ -67,7 +68,7 @@ func sendWork(work *Work, jobs *sync.WaitGroup, results [][]string, index int) {
 		panic("Failed to decode worker response")
 	}
 
-	log.Printf("✅ Received processed segment from worker: \"%.30s...\"", respContent.Segment)
+	log.Printf("Received segment from worker: %s", respContent.Segment)
 
 	results[index] = respContent.Segment
 
@@ -76,18 +77,19 @@ func sendWork(work *Work, jobs *sync.WaitGroup, results [][]string, index int) {
 func main() {
 
 	router := gin.Default()
-	router.Use(cors.Default()) //permits communication
+	//router.Use(cors.Default()) //permits communication
 
 	// Define the POST endpoint
 	router.POST("/", func(c *gin.Context) {
 		var data RequestData
 
-		if err := c.ShouldBindJSON(&data); err != nil {
+		err := c.ShouldBindJSON(&data)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Error decoding JSON: " + err.Error()})
 			return
 		}
 
-		log.Printf("Received data: Text='%.20s...', Mistakes=%d\n", data.Text, data.Mistakes)
+		log.Printf("Received data:\n Text:'%s',\n Mistakes:%d\n, Word count:%d", data.Text, data.Mistakes, data.WordCount)
 
 		//here is where we split the data
 		//var usertext = data.Text
@@ -97,9 +99,11 @@ func main() {
 		wordCount := data.WordCount
 		results := make([][]string, segmentCount)
 		wordsPerSegment := wordCount / segmentCount
+		//kind of flawed logic here. if the text is split by mean numbers we get a disproportionately large final segment
+
 		fmt.Printf("Jobs for this request: %d", segmentCount)
-		//so what we do here is to split the text into segments, which are then put in the queue
-		for i := 0; i < segmentCount; i++ {
+		//split the text into segments and put them in the queue
+		for i := range segmentCount {
 			start := i * wordsPerSegment
 			end := (i + 1) * wordsPerSegment
 			if i == segmentCount-1 {
@@ -125,7 +129,7 @@ func main() {
 		finalText := strings.Join(finalWords, " ")
 
 		c.JSON(http.StatusOK, gin.H{
-			"message":      "All jobs completed successfully!",
+			"message":      "Text processed.",
 			"receivedText": finalText,
 		})
 	})

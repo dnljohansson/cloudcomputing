@@ -10,8 +10,8 @@
 
     async function submit() {
         isLoading = true; // State is set to true when the request starts
-        error = null;     // Clear previous errors
-        responseMessage = ''; // Clear previous success messages
+        error = null;     
+        responseMessage = '';
 
         const data = {
             text: text,
@@ -34,7 +34,7 @@
             if (response.ok) {
                 // 2. Parse the successful JSON response from the server
                 const result = await response.json();
-                
+                resultRecieved = true;
                 responseMessage = result.responseData.receivedText;
                 
             } else {
@@ -49,7 +49,7 @@
         } finally {
             // 5. This block runs after try or catch, ensuring isLoading is reset
             isLoading = false;
-            resultRecieved = true;
+            
         }
     }
 
@@ -63,10 +63,13 @@
         <label>Word count: {wordCount}</label>
         <label>
             <input class="numbers" type="number" bind:value={mistakes} min="1" max ={wordCount} />
-            <!--Super arbitrary, but it makes the thing look nicer-->
-            <input class="slider" type="range" bind:value={mistakes} min="1" max ={Math.round(wordCount/2)} />
+            <input class="slider" type="range" bind:value={mistakes} min="1" max ={wordCount} />
         </label>
-        <p>{mistakes} {mistakes == 1 ? "word" : "words"} will be misspelled, which is equivalent to every 1 in {Math.round(wordCount/mistakes)} words. </p>
+        {#if mistakes == wordCount}
+            <p>We will try to misspell every word</p>
+        {:else}
+            <p>{mistakes} {mistakes == 1 ? "word" : "words"} will be misspelled, which is equivalent to every 1 in {Math.round(wordCount/mistakes)} words. </p>
+        {/if}
         <button onclick={submit} class="sendit">Submit</button>
         
     </form>
@@ -146,5 +149,15 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+    }
+    
+    .loading{
+        font-size: x-large;
+        position: absolute;
+        margin-left: auto;
+        margin-right: auto;
+        left: 0;
+        right: 0;
+        text-align: center;    
     }
 </style>

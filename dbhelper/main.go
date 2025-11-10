@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -15,19 +14,18 @@ import (
 
 func main() {
 	uri := os.Getenv("DB")
-	timeout := 10
 	maxRetries := 5
 	var client *mongo.Client
 	var err error
 
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries { //new way of doing for loops. cool.
 		client, err = mongo.Connect(options.Client().ApplyURI(uri))
 		if err == nil {
 			fmt.Println("Connected to database")
 			break
 		}
 
-		time.Sleep(time.Duration(timeout) * time.Second)
+		time.Sleep(time.Duration(10) * time.Second)
 
 	}
 	if err != nil {
@@ -50,22 +48,22 @@ func main() {
 	}
 	if count == 0 {
 		//collection does not exist. Create it
-		log.Println("Database is empty. Populating with misspellings.json...")
+		fmt.Println("Database is empty. Populating with misspellings.json...")
 		file, err := os.ReadFile("misspellings.json")
 		if err != nil {
-			log.Fatalf("Failed to read misspellings.json: %v", err)
+			panic("Failed to read misspellings.json")
 		}
 
-		// Unmarshal the JSON into a generic map
-		var misspellingsData map[string]interface{}
+		// Unmarshal the JSON file into a stucture that fits out object
+		var misspellingsData map[string]any
 		if err := json.Unmarshal(file, &misspellingsData); err != nil {
-			log.Fatalf("Failed to unmarshal JSON: %v", err)
+			panic("Failed to unmarshal JSON")
 		}
 
 		// FIX: Insert the map directly, without wrapping it in another object.
 		_, err = coll.InsertOne(context.TODO(), misspellingsData)
 		if err != nil {
-			log.Fatalf("Failed to insert document: %v", err)
+			panic("Failed to insert document into database")
 		}
 		fmt.Println("Created database with misspellings")
 	}

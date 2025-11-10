@@ -12,6 +12,7 @@
     	<a href="/">HOME</a>
     	<a href="/about">ABOUT</a>
 	</nav>
+	
 </svelte:head>
 
 {@render children()}

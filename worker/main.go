@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -36,7 +39,7 @@ func main() {
 	var coll *mongo.Collection
 	var err error
 
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries {
 		client, err = mongo.Connect(options.Client().ApplyURI(uri))
 
 		coll = client.Database("spellwrong").Collection("misspellings")
@@ -87,10 +90,14 @@ func main() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "bad request"})
 			return
 		}
+		//  calling it processedText could be unclear
+		//  userText might have been clearer,
+		//  but we're not too concerned with keeping the original text intact
+		//  and don't bother making a copy
 		processedText := work.Segment
 		fmt.Printf("Started work on: %s", processedText)
 
-		time.Sleep(1 * time.Second) // Simulate work
+		time.Sleep(1 * time.Second) // Only used to demonstrate horizontal scaling.
 
 		for attempts := 0; attempts < 5; attempts++ {
 			index := rand.Intn(len(processedText))
@@ -102,16 +109,30 @@ func main() {
 				} else {
 					word = value[0]
 				}
-				processedText[index] = word
+
+				//match the casing of the original word
+				//misspellings can be longer or shorter than the original word, so we only take
+				//UPPERCASE and Title Case words into account.
+				caser := cases.Title(language.English) //need this to perform title case conversion
+				if processedText[index] == strings.ToUpper(processedText[index]) {
+					//is uppercase
+					processedText[index] = strings.ToUpper(word)
+				} else if processedText[index] == caser.String(processedText[index]) {
+					//is title case
+					processedText[index] = caser.String(word)
+				} else {
+					//regular lowercase or mixed case word
+					processedText[index] = word
+				}
 				break
 			}
 		}
 
-		//might have swapped the word. maybe not
+		//might have swapped a word. maybe not. It's ok anyway :)
 		c.JSON(http.StatusOK, gin.H{"segment": processedText})
 	})
 
-	fmt.Printf("✅ Worker server starting on port %s\n", port)
+	fmt.Printf("Worker server starting on port %s\n", port)
 	router.Run(":" + port)
 
 }

@@ -5,6 +5,7 @@ go 1.25.3
 require (
 	github.com/gin-gonic/gin v1.11.0
 	go.mongodb.org/mongo-driver/v2 v2.4.0
+	golang.org/x/text v0.27.0
 )
 
 require (
@@ -42,7 +43,6 @@ require (
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
