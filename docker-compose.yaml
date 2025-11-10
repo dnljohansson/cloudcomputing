@@ -18,21 +18,20 @@ services:
         image: worker
         environment:
             DB: mongodb://database:27017
+            PORT: 3002
 
     dispatch:
         image: dispatch
         environment:
-            WORKER_URL: http://worker:3001
+            WORKER_URL: http://worker:3002
+            PORT: 3001
     
     frontend:
         image: frontend
         ports:
-            - 5173:5173
-        volumes:
-            - ./frontend/src:/app/src
-            - ./frontend/static:/app/static
+            - 80:3000
         environment:
-            API_ENDPOINT: http://dispatch:3000
+            API_ENDPOINT: http://dispatch:3001
         
 volumes:
     database-data:

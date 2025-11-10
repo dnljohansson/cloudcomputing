@@ -1,0 +1,248 @@
+# FRONTEND Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  labels: 
+    app: frontend
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80 #port seen from host. just go to localhost to find the website
+    nodePort: 30000 #Could be wrong. will have to see
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app: frontend
+---
+#FRONTEND Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spellwrong-frontend
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: spellwrong-frontend
+        image: dnljohansson/spellwrong-frontend:v1
+        resources:
+          requests: #the kubernetes plugin gets mad at me if I don't specify this
+              memory: "256Mi"
+              cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3000
+        env: #environment vars for the containers
+          - name: PORT
+            value: "3000"
+          - name: API_ENDPOINT
+            value: "http://dispatch-service:3001"
+---
+#DISPATCH Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: dispatch-service
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 3001
+    nodePort: 30001
+    protocol: TCP
+  selector:
+    app: dispatch
+---
+#DISPATCH Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spellwrong-dispatch
+  labels:
+    app: dispatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dispatch
+  template:
+    metadata:
+      labels:
+        app: dispatch
+    spec:
+      containers:
+      - name: spellwrong-dispatch
+        image: dnljohansson/spellwrong-dispatch:v1
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3001
+        env:
+          - name: PORT
+            value: "3001"
+          - name: WORKER_URL
+            value: "http://worker-service:3002"
+---
+#WORKER Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker-service
+  labels:
+    app: worker
+spec:
+  type: LoadBalancer
+  selector:
+    app: worker
+  ports:
+  - name: http
+    port: 3002
+    nodePort: 30002
+---
+#WORKER Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spellwrong-worker
+spec:
+  replicas: 20
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: spellwrong-worker
+        image: dnljohansson/spellwrong-worker:v1
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3002
+        env:
+          - name: PORT
+            value: "3002"
+          - name: DB
+            value: "mongodb://database-service:27017"
+---
+#DBHELPER Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dbhelper-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: dbhelper
+        image: dnljohansson/spellwrong-dbhelper:v1
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        env:
+        - name: DB
+          value: "mongodb://database-service:27017"
+      restartPolicy: Never
+---
+#MONGO Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: database-service
+  labels:
+    app: database
+spec:
+  selector:
+    app: database
+  ports:
+  - port: 27017
+    targetPort: mongodb-port
+---
+#MONGO StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database
+  labels:
+    app: database
+spec:
+  selector:
+    matchLabels:
+      app: database
+  serviceName: mongodb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+      - name: database
+        image: mongo
+        ports:
+        - containerPort: 27017
+          name: mongodb-port
+        volumeMounts:
+        - name: database-data
+          mountPath: /data/db
+        - name: mongo-config
+          mountPath: /data/configdb
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        
+  volumeClaimTemplates:
+  - metadata:
+      name: database-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+  - metadata:
+      name: mongo-config
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Mi
+
+
+
+
+
+
+

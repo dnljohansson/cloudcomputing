@@ -48,6 +48,7 @@
             error = e.message;
         } finally {
             // 5. This block runs after try or catch, ensuring isLoading is reset
+            
             isLoading = false;
             
         }

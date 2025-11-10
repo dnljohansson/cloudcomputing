@@ -1,12 +1,12 @@
 //server that sends the request to dispatch internally
 
 import {json} from '@sveltejs/kit'
-import {API_ENDPOINT} from '$env/static/private'
+import {env} from '$env/dynamic/private'
 
 export async function POST({request}) {
     const requestData = await request.json();
-
-    const response = await fetch(API_ENDPOINT, {
+    const url = env.API_ENDPOINT;
+    const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify(requestData),
         headers: {

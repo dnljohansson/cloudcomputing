@@ -23,8 +23,6 @@ var client = &http.Client{
 //Note: does not appear to work with docker's internal load balancer, as it doesn't properly round-robin the requests
 //It instead sends requests to two of the services
 
-const port = "3000"
-
 // RequestData struct defines the expected structure of the JSON payload
 type RequestData struct {
 	Text      string `json:"text"`
@@ -133,6 +131,8 @@ func main() {
 			"receivedText": finalText,
 		})
 	})
+
+	port := os.Getenv("PORT")
 
 	fmt.Printf("Server starting on port %s\n", port)
 	// Start the server

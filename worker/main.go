@@ -20,8 +20,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-const port = "3001"
-
 type Work struct {
 	Segment []string `json:"segment"`
 }
@@ -131,6 +129,8 @@ func main() {
 		//might have swapped a word. maybe not. It's ok anyway :)
 		c.JSON(http.StatusOK, gin.H{"segment": processedText})
 	})
+
+	port := os.Getenv("PORT")
 
 	fmt.Printf("Worker server starting on port %s\n", port)
 	router.Run(":" + port)

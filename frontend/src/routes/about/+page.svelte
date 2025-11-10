@@ -4,6 +4,7 @@
         Just enter your text, choose how many mistakes you want in it, and press Send.
         Spellwrong will instantly make your text more humane, and no-one will think that you could have written it with AI. Just look at the errors!
     </p>
+    <p class="breadtext">This project was finalized in November 2025 as part of the course Cloud Computing and Big Data at Blekinge Tekniska Högskola</p>
 </div>
 
 <style>
