@@ -1,29 +1,28 @@
 services:
-    textstore:
+    database:
         image: mongo:latest
         restart: always
         command: -quiet -syslog
         expose:
             - "27017"
         volumes:
-         -  textstore-data:/data/db
+         -  database-data:/data/db
          -  mongo-config:/data/configdb
 
     dbhelper:
         image: dbhelper
         environment:
-            TEXTSTORE_HOST: mongodb://textstore:27017
+            DB: mongodb://database:27017
     
-    #worker:
-    #    image: worker
-    #    environment:
-    #        TEXTSTORE_HOST: mongodb://textstore:27017
+    worker:
+        image: worker
+        environment:
+            DB: mongodb://database:27017
 
     dispatch:
         image: dispatch
         environment:
-            WORKER: worker
-
+            WORKER_URL: http://worker:3001
     
     frontend:
         image: frontend
@@ -36,5 +35,5 @@ services:
             API_ENDPOINT: http://dispatch:3000
         
 volumes:
-    textstore-data:
+    database-data:
     mongo-config:

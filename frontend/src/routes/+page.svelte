@@ -1,9 +1,10 @@
 <script>
-    let rate = $state(0);
+    let mistakes = $state(0);
     let text = $state("");
-    let isLoading = false;
+    let isLoading = $state(false);
+    let resultRecieved = $state(false);
     let error = null;
-    let responseMessage = '';
+    let responseMessage = $state('');
     let matchWords = $derived(text.match(/\S+/g));
     let wordCount = $derived(matchWords ? matchWords.length : 0);
 
@@ -14,7 +15,8 @@
 
         const data = {
             text: text,
-            rate: rate
+            mistakes: mistakes,
+            wordCount: wordCount
         };
 
         const bodyContent = JSON.stringify(data); 
@@ -32,10 +34,8 @@
             if (response.ok) {
                 // 2. Parse the successful JSON response from the server
                 const result = await response.json();
-                responseMessage = 'Success! Server message: ' + (result.message || JSON.stringify(result));
-                // Optional: You can reset the form data here if needed
-                // text = '';
-                // rate = 0;
+                
+                responseMessage = result.responseData.receivedText;
                 
             } else {
                 // 3. Handle specific HTTP error status codes (e.g., 400, 500)
@@ -49,6 +49,7 @@
         } finally {
             // 5. This block runs after try or catch, ensuring isLoading is reset
             isLoading = false;
+            resultRecieved = true;
         }
     }
 
@@ -56,18 +57,30 @@
 
 <p class="logo">SPELLWRONG</p>
 
-<form class = "inputform">
-    <textarea bind:value={text} class = "usertext" placeholder="Paste your text here."></textarea>
-    <label>Word count: {wordCount}</label>
-    <label>
-        <input class="numbers" type="number" bind:value={rate} min="1" max ={wordCount} />
-        <!--Super arbitrary, but it makes the thing look nicer-->
-        <input class="slider" type="range" bind:value={rate} min="1" max ={Math.round(wordCount/2)} />
-    </label>
-    <p>{rate} {rate == 1 ? "word" : "words"} will be misspelled, which is equivalent to every 1 in {Math.round(wordCount/rate)} words. </p>
-    <button onclick={submit} class="sendit">Submit</button>
+{#if !isLoading && !resultRecieved}
+    <form class = "inputform">
+        <textarea bind:value={text} class = "usertext" placeholder="Paste your text here."></textarea>
+        <label>Word count: {wordCount}</label>
+        <label>
+            <input class="numbers" type="number" bind:value={mistakes} min="1" max ={wordCount} />
+            <!--Super arbitrary, but it makes the thing look nicer-->
+            <input class="slider" type="range" bind:value={mistakes} min="1" max ={Math.round(wordCount/2)} />
+        </label>
+        <p>{mistakes} {mistakes == 1 ? "word" : "words"} will be misspelled, which is equivalent to every 1 in {Math.round(wordCount/mistakes)} words. </p>
+        <button onclick={submit} class="sendit">Submit</button>
+        
+    </form>
+{:else if isLoading}
+    <p class="loading">Loading...</p>
+{:else if !isLoading && resultRecieved}
+    <div class="presentResult">
+        <p>Below is your new text</p>
+        <p class = "output">{responseMessage}</p>
+    </div>
     
-</form>
+{/if}
+
+
 
 <style>
     .logo {
@@ -115,5 +128,23 @@
         border-radius: 5px;
         background-color: rgb(52, 57, 68);
         border: 0px;
+    }
+
+    .output{
+        min-height: 50vh;
+        width: 50%;
+        overflow: auto;
+        resize: none;
+        font-family: Arial, Helvetica, sans-serif;
+        border-radius: 10px;
+        background-color: rgb(52, 57, 68);
+        color: white;
+        padding: 10px;
+    }
+
+    .presentResult{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 </style>

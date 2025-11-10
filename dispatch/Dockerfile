@@ -1,17 +1,20 @@
-FROM golang AS builder
+FROM golang:1.25.3-alpine3.22 AS builder
 
 WORKDIR /app
 
-COPY go.mod ./
+COPY go.mod go.sum ./
+RUN apk add --no-cache git
 RUN go mod download
+
 
 COPY *.go ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /dispatch
+RUN go build -o ./dispatch
 
-FROM alpine:latest
+FROM alpine:3.22
 WORKDIR /
 
-COPY --from=builder /dispatch /dispatch
+COPY --from=builder /app/dispatch /dispatch
+
 
 ENTRYPOINT ["/dispatch"]

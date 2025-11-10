@@ -1,81 +1,138 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"os"
+	"strings"
+	"sync"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
+
+var client = &http.Client{
+	Transport: &http.Transport{
+		DisableKeepAlives: true,
+	},
+}
+
+//allows the load balancer to do its work, as we are forcing this client to do a DNS lookup for every connection
 
 const port = "3000"
 
 // RequestData struct defines the expected structure of the JSON payload
 type RequestData struct {
-	Text string `json:"text"`
-	Rate int    `json:"rate"`
+	Text      string `json:"text"`
+	Mistakes  int    `json:"mistakes"`
+	WordCount int    `json:"wordCount"`
 }
 
-// corsMiddleware adds the necessary CORS headers to each response.
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set headers
-		w.Header().Set("Access-Control-Allow-Origin", "*") // Allow any origin
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		// Handle pre-flight requests
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		// Next
-		next.ServeHTTP(w, r)
-	})
+type Work struct {
+	Segment []string `json:"segment"`
 }
 
-// submitHandler processes requests to the /api/submit endpoint
-func submitHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Received request on /") // Log that a request was received
+func sendWork(work *Work, jobs *sync.WaitGroup, results [][]string, index int) {
+	workerURL := os.Getenv("WORKER_URL")
+	defer jobs.Done()
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
-	body, err := io.ReadAll(r.Body)
+	log.Printf("▶️  Sending segment to worker: \"%.30s...\"", work.Segment)
+	marshaled, err := json.Marshal(work)
 	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
-		return
+		panic("Failed to marshal work.")
 	}
-	defer r.Body.Close()
-
-	var data RequestData
-	err = json.Unmarshal(body, &data)
+	req, err := http.NewRequest("POST", workerURL, bytes.NewBuffer(marshaled))
 	if err != nil {
-		http.Error(w, "Error decoding JSON", http.StatusBadRequest)
-		return
+		panic("Failed to create post request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		panic("Failed to send request to worker")
 	}
 
-	log.Printf("Received data: Text='%.20s...', Rate=%d\n", data.Text, data.Rate)
+	defer resp.Body.Close()
 
-	// Respond to the client
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Request received successfully!", "receivedText": data.Text})
+	if resp.StatusCode != http.StatusOK {
+		panic("Worker returned non-OK status code")
+	}
+
+	var respContent Work
+
+	if err := json.NewDecoder(resp.Body).Decode(&respContent); err != nil {
+		panic("Failed to decode worker response")
+	}
+
+	log.Printf("✅ Received processed segment from worker: \"%.30s...\"", respContent.Segment)
+
+	results[index] = respContent.Segment
+
 }
 
 func main() {
-	// Create a new ServeMux
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", submitHandler)
 
-	// Wrap the mux with the CORS middleware
-	handler := corsMiddleware(mux)
+	router := gin.Default()
+	router.Use(cors.Default()) //permits communication
 
-	fmt.Printf("✅ Go server starting on port %s\n", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
+	// Define the POST endpoint
+	router.POST("/", func(c *gin.Context) {
+		var data RequestData
+
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Error decoding JSON: " + err.Error()})
+			return
+		}
+
+		log.Printf("Received data: Text='%.20s...', Mistakes=%d\n", data.Text, data.Mistakes)
+
+		//here is where we split the data
+		//var usertext = data.Text
+		var segmentCount = data.Mistakes
+		var jobs sync.WaitGroup
+		words := strings.Fields(data.Text)
+		wordCount := data.WordCount
+		results := make([][]string, segmentCount)
+		wordsPerSegment := wordCount / segmentCount
+		fmt.Printf("Jobs for this request: %d", segmentCount)
+		//so what we do here is to split the text into segments, which are then put in the queue
+		for i := 0; i < segmentCount; i++ {
+			start := i * wordsPerSegment
+			end := (i + 1) * wordsPerSegment
+			if i == segmentCount-1 {
+				end = wordCount
+			}
+			segment := words[start:end]
+
+			work := Work{Segment: segment}
+
+			jobs.Add(1)
+
+			//subroutine, allows async operations
+			go sendWork(&work, &jobs, results, i)
+
+		}
+		//wait for all jobs to finish
+		jobs.Wait()
+
+		var finalWords []string
+		for _, segment := range results {
+			finalWords = append(finalWords, segment...)
+		}
+		finalText := strings.Join(finalWords, " ")
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":      "All jobs completed successfully!",
+			"receivedText": finalText,
+		})
+	})
+
+	fmt.Printf("Server starting on port %s\n", port)
+	// Start the server
+	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }

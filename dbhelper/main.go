@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 )
 
 func main() {
-	uri := os.Getenv("TEXTSTORE_HOST")
+	uri := os.Getenv("DB")
 	timeout := 10
 	maxRetries := 5
 	var client *mongo.Client
@@ -49,22 +50,22 @@ func main() {
 	}
 	if count == 0 {
 		//collection does not exist. Create it
-		file, err := os.Open("./misspellings.json")
+		log.Println("Database is empty. Populating with misspellings.json...")
+		file, err := os.ReadFile("misspellings.json")
 		if err != nil {
-			panic("Failed to open JSON file")
+			log.Fatalf("Failed to read misspellings.json: %v", err)
 		}
-		defer file.Close()
-		var misspellings map[string][]string
-		decoder := json.NewDecoder(file)
-		err = decoder.Decode(&misspellings)
-		if err != nil {
-			panic("Could not decode JSON file")
-		}
-		fmt.Println(misspellings["about"])
 
-		_, err = coll.InsertOne(context.TODO(), bson.M{"data": misspellings})
+		// Unmarshal the JSON into a generic map
+		var misspellingsData map[string]interface{}
+		if err := json.Unmarshal(file, &misspellingsData); err != nil {
+			log.Fatalf("Failed to unmarshal JSON: %v", err)
+		}
+
+		// FIX: Insert the map directly, without wrapping it in another object.
+		_, err = coll.InsertOne(context.TODO(), misspellingsData)
 		if err != nil {
-			panic("Failed to populate database")
+			log.Fatalf("Failed to insert document: %v", err)
 		}
 		fmt.Println("Created database with misspellings")
 	}
