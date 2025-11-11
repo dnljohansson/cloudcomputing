@@ -127,8 +127,7 @@ func main() {
 		finalText := strings.Join(finalWords, " ")
 
 		c.JSON(http.StatusOK, gin.H{
-			"message":      "Text processed.",
-			"receivedText": finalText,
+			"processedText": finalText,
 		})
 	})
 

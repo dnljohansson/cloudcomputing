@@ -10,7 +10,7 @@
 
     async function submit() {
         isLoading = true; // State is set to true when the request starts
-        error = null;     
+        error = null;
         responseMessage = '';
 
         const data = {
@@ -30,12 +30,10 @@
                 }
             });
 
-            // 1. Check if the HTTP status code indicates success (200-299)
             if (response.ok) {
-                // 2. Parse the successful JSON response from the server
                 const result = await response.json();
                 resultRecieved = true;
-                responseMessage = result.responseData.receivedText;
+                responseMessage = result.responseData.processedText;
                 
             } else {
                 // 3. Handle specific HTTP error status codes (e.g., 400, 500)
@@ -43,12 +41,9 @@
                 throw new Error(`HTTP Error ${response.status}: ${errorData}`);
             }
         } catch (e) {
-            // 4. Handle network errors (e.g., server offline, connection failed)
             console.error('Submission failed:', e);
             error = e.message;
         } finally {
-            // 5. This block runs after try or catch, ensuring isLoading is reset
-            
             isLoading = false;
             
         }

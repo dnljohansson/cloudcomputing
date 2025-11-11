@@ -10,24 +10,24 @@ services:
          -  mongo-config:/data/configdb
 
     dbhelper:
-        image: dbhelper
+        image: dnljohansson/spellwrong-dbhelper:v1.1
         environment:
             DB: mongodb://database:27017
     
     worker:
-        image: worker
+        image: dnljohansson/spellwrong-worker:v1.1
         environment:
             DB: mongodb://database:27017
             PORT: 3002
 
     dispatch:
-        image: dispatch
+        image: dnljohansson/spellwrong-dispatch:v1.1
         environment:
             WORKER_URL: http://worker:3002
             PORT: 3001
     
     frontend:
-        image: frontend
+        image: dnljohansson/spellwrong-frontend:v1.1
         ports:
             - 80:3000
         environment:

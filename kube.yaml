@@ -24,7 +24,7 @@ metadata:
   labels:
     app: frontend
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: frontend
@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
       - name: spellwrong-frontend
-        image: dnljohansson/spellwrong-frontend:v1
+        image: dnljohansson/spellwrong-frontend:v1.1
         resources:
           requests: #the kubernetes plugin gets mad at me if I don't specify this
               memory: "256Mi"
@@ -74,7 +74,7 @@ metadata:
   labels:
     app: dispatch
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: dispatch
@@ -85,7 +85,7 @@ spec:
     spec:
       containers:
       - name: spellwrong-dispatch
-        image: dnljohansson/spellwrong-dispatch:v1
+        image: dnljohansson/spellwrong-dispatch:v1.1
         resources:
           requests:
             memory: "128Mi"
@@ -134,7 +134,7 @@ spec:
     spec:
       containers:
       - name: spellwrong-worker
-        image: dnljohansson/spellwrong-worker:v1
+        image: dnljohansson/spellwrong-worker:v1.1
         resources:
           requests:
             memory: "128Mi"
@@ -160,7 +160,7 @@ spec:
     spec:
       containers:
       - name: dbhelper
-        image: dnljohansson/spellwrong-dbhelper:v1
+        image: dnljohansson/spellwrong-dbhelper:v1.1
         resources:
           requests:
             memory: "128Mi"
